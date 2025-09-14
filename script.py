@@ -12,12 +12,8 @@ def compile_contract(file_path, contract_name):
     یک فایل Solidity را کامپایل کرده و ABI و Bytecode آن را برمی‌گرداند.
     """
     print(f"در حال کامپایل کردن {file_path}...")
-    # اگر نسخه مناسب کامپایلر نصب نباشد، آن را نصب می‌کند
     install_solc() 
-    
     compiled_sol = compile_files([file_path], output_values=['abi', 'bin'], solc_version='0.8.20')
-    
-    # استخراج ABI و Bytecode از نتیجه کامپایل
     contract_id = f"{file_path}:{contract_name}"
     abi = compiled_sol[contract_id]['abi']
     bytecode = compiled_sol[contract_id]['bin']
@@ -35,21 +31,19 @@ def deploy_contract(w3, account, chain_id, abi, bytecode, contract_name, contrac
     private_key = os.environ.get('PRIVATE_KEY')
     contract = w3.eth.contract(abi=abi, bytecode=bytecode)
     
-    # ساخت تراکنش برای دیپلوی با استفاده از constructor
     transaction = contract.constructor(contract_name, contract_symbol).build_transaction({
         'chainId': chain_id,
         'from': account.address,
         'nonce': w3.eth.get_transaction_count(account.address),
-        'gas': 2000000, # Gas limit for deployment
+        'gas': 2000000,
         'gasPrice': w3.eth.gas_price
     })
     
-    # امضا و ارسال تراکنش
     signed_txn = w3.eth.account.sign_transaction(transaction, private_key=private_key)
-    tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+    # FIX: Changed .rawTransaction to .raw_transaction
+    tx_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
     print(f"در حال دیپلوی قرارداد '{contract_name}'. هش تراکنش: {tx_hash.hex()}")
     
-    # انتظار برای تایید تراکنش
     tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
     contract_address = tx_receipt['contractAddress']
     print(f"قرارداد '{contract_name}' با موفقیت در آدرس {contract_address} دیپلوی شد.")
@@ -98,7 +92,8 @@ try:
         'gasPrice': w3.eth.gas_price
     })
     signed_tx1 = w3.eth.account.sign_transaction(tx1, private_key=private_key)
-    tx1_hash = w3.eth.send_raw_transaction(signed_tx1.rawTransaction)
+    # FIX: Changed .rawTransaction to .raw_transaction
+    tx1_hash = w3.eth.send_raw_transaction(signed_tx1.raw_transaction)
     w3.eth.wait_for_transaction_receipt(tx1_hash)
     print(f"تراکنش 'interactWithFee' با موفقیت انجام شد. هش: {tx1_hash.hex()}")
 
@@ -134,13 +129,13 @@ try:
         'gasPrice': w3.eth.gas_price
     })
     signed_tx3 = w3.eth.account.sign_transaction(tx3, private_key=private_key)
-    tx3_hash = w3.eth.send_raw_transaction(signed_tx3.rawTransaction)
+    # FIX: Changed .rawTransaction to .raw_transaction
+    tx3_hash = w3.eth.send_raw_transaction(signed_tx3.raw_transaction)
     w3.eth.wait_for_transaction_receipt(tx3_hash)
     print(f"تراکنش 'withdrawEther' با موفقیت انجام شد. هش: {tx3_hash.hex()}")
 
 except Exception as e:
     print(f"\n!!! یک خطای کلی رخ داد: {e}")
-    # در صورت بروز خطا، اسکریپت با کد غیر صفر خارج می‌شود تا در گیت‌هاب اکشن خطا ثبت شود
     exit(1)
 
 print("\n\nچرخه کامل اسکریپت با موفقیت اجرا شد.")
