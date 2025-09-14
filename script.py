@@ -9,16 +9,20 @@ from solcx import compile_files, install_solc, set_solc_version
 
 def compile_contract(file_path, contract_name):
     """
-    یک فایل Solidity را کامپایل کرده و ABI و Bytecode آن را برمی‌گرداند.
+    یک فایل Solidity فلت شده را کامپایل کرده و ABI و Bytecode آن را برمی‌گرداند.
     """
     solc_version = '0.8.20'
     print(f"در حال کامپایل کردن {file_path} با solc نسخه {solc_version}...")
     
-    # FIX: Explicitly install and set the required solc version
+    # نصب و تنظیم نسخه دقیق کامپایلر
     install_solc(solc_version)
     set_solc_version(solc_version)
     
-    compiled_sol = compile_files([file_path], output_values=['abi', 'bin'])
+    # کامپایل فایل بدون نیاز به remapping چون تمام کدها در یک فایل هستند
+    compiled_sol = compile_files(
+        [file_path],
+        output_values=['abi', 'bin']
+    )
     
     contract_id = f"{file_path}:{contract_name}"
     abi = compiled_sol[contract_id]['abi']
