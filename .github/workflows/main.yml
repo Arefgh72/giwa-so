@@ -1,0 +1,83 @@
+# نام گردش کار که در تب Actions گیت‌هاب نمایش داده می‌شود
+name: اجرای چرخه کامل تراکنش‌ها
+
+# تعریف تریگرها (عوامل فعال‌سازی) برای این گردش کار
+on:
+  # ۱. فعال‌سازی دستی (Manual Trigger)
+  workflow_dispatch:
+    inputs:
+      run_count:
+        description: 'تعداد دفعات اجرای اسکریپت'
+        required: true
+        default: '1' # مقدار پیش‌فرض روی ۱ تنظیم شده است
+        type: string
+
+  # ۲. فعال‌سازی زمان‌بندی شده (Scheduled Trigger)
+  schedule:
+    # این دستور هر روز ساعت 7:53 بامداد به وقت UTC اجرا می‌شود
+    # که معادل 11:23 قبل از ظهر به وقت ایران (UTC+3:30) است
+    - cron: '23 7 * * *'
+
+jobs:
+  # تعریف یک کار (job) با نام run-transaction-cycle
+  run-transaction-cycle:
+    # این کار بر روی آخرین نسخه اوبونتو اجرا می‌شود
+    runs-on: ubuntu-latest
+
+    # تعریف مراحل (steps) این کار
+    steps:
+      # مرحله ۱: کپی کردن کدهای ریپازیتوری به محیط اجرایی
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      # مرحله ۲: نصب و تنظیم نسخه پایتون
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      # مرحله ۳: نصب کامپایلر Solidity (solc) که برای اسکریپت ضروری است
+      - name: Install Solidity Compiler (solc)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y solidity
+
+      # مرحله ۴: نصب کتابخانه‌های پایتون از روی فایل نیازمندی‌ها
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # مرحله ۵: اجرای اسکریپت پایتون در یک حلقه
+      - name: Run Python Script Cycle
+        # پاس دادن کلید خصوصی به صورت امن از GitHub Secrets
+        env:
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+        run: |
+          # تعداد تکرار را از ورودی دستی بگیر، اگر وجود نداشت (مثلا در اجرای زمانبندی شده)، ۱ در نظر بگیر
+          RUN_COUNT=${{ github.event.inputs.run_count || 1 }}
+          
+          echo "شروع چرخه. اسکریپت به تعداد $RUN_COUNT بار اجرا خواهد شد."
+          
+          # حلقه for برای تکرار اجرای اسکریپت
+          for i in $(seq 1 $RUN_COUNT)
+          do
+            echo "" # ایجاد یک خط خالی برای خوانایی بهتر لاگ‌ها
+            echo "--- شروع اجرای شماره #$i از $RUN_COUNT ---"
+            
+            python script.py
+            
+            # بررسی اینکه آیا اسکریپت با خطا مواجه شده یا نه
+            if [ $? -ne 0 ]; then
+              echo "اسکریپت در اجرای شماره #$i با خطا مواجه شد. عملیات متوقف می‌شود."
+              exit 1
+            fi
+            
+            # اگر بیش از یک بار اجرا تنظیم شده بود، یک تاخیر کوتاه بین چرخه‌ها ایجاد کن
+            if [ $RUN_COUNT -gt 1 ] && [ $i -lt $RUN_COUNT ]; then
+              echo "--- اجرای شماره #$i با موفقیت تمام شد. منتظر چرخه بعدی... ---"
+              sleep 10 # یک تاخیر ثابت ۱۰ ثانیه‌ای بین چرخه‌های کلی
+            fi
+          done
+          
+          echo "تمام اجراها با موفقیت به پایان رسید."
