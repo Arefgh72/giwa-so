@@ -3,7 +3,7 @@ import os
 import random
 import time
 from web3 import Web3
-from solcx import compile_files, install_solc
+from solcx import compile_files, install_solc, set_solc_version
 
 # --- توابع کمکی ---
 
@@ -11,9 +11,15 @@ def compile_contract(file_path, contract_name):
     """
     یک فایل Solidity را کامپایل کرده و ABI و Bytecode آن را برمی‌گرداند.
     """
-    print(f"در حال کامپایل کردن {file_path}...")
-    install_solc() 
-    compiled_sol = compile_files([file_path], output_values=['abi', 'bin'], solc_version='0.8.20')
+    solc_version = '0.8.20'
+    print(f"در حال کامپایل کردن {file_path} با solc نسخه {solc_version}...")
+    
+    # FIX: Explicitly install and set the required solc version
+    install_solc(solc_version)
+    set_solc_version(solc_version)
+    
+    compiled_sol = compile_files([file_path], output_values=['abi', 'bin'])
+    
     contract_id = f"{file_path}:{contract_name}"
     abi = compiled_sol[contract_id]['abi']
     bytecode = compiled_sol[contract_id]['bin']
@@ -40,7 +46,6 @@ def deploy_contract(w3, account, chain_id, abi, bytecode, contract_name, contrac
     })
     
     signed_txn = w3.eth.account.sign_transaction(transaction, private_key=private_key)
-    # FIX: Changed .rawTransaction to .raw_transaction
     tx_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
     print(f"در حال دیپلوی قرارداد '{contract_name}'. هش تراکنش: {tx_hash.hex()}")
     
@@ -92,7 +97,6 @@ try:
         'gasPrice': w3.eth.gas_price
     })
     signed_tx1 = w3.eth.account.sign_transaction(tx1, private_key=private_key)
-    # FIX: Changed .rawTransaction to .raw_transaction
     tx1_hash = w3.eth.send_raw_transaction(signed_tx1.raw_transaction)
     w3.eth.wait_for_transaction_receipt(tx1_hash)
     print(f"تراکنش 'interactWithFee' با موفقیت انجام شد. هش: {tx1_hash.hex()}")
@@ -129,7 +133,6 @@ try:
         'gasPrice': w3.eth.gas_price
     })
     signed_tx3 = w3.eth.account.sign_transaction(tx3, private_key=private_key)
-    # FIX: Changed .rawTransaction to .raw_transaction
     tx3_hash = w3.eth.send_raw_transaction(signed_tx3.raw_transaction)
     w3.eth.wait_for_transaction_receipt(tx3_hash)
     print(f"تراکنش 'withdrawEther' با موفقیت انجام شد. هش: {tx3_hash.hex()}")
